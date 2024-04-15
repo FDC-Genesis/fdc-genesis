@@ -45,7 +45,7 @@
 		function getconvolist(id, lo, lc, dltd) {
 			let convolist = "";
 			$.getJSON(`<?= Router::url('/convolist') ?>?id=${id}&offset=${lo}&counter=${lc}&deleted=${dltd}`, function(data) {
-				console.log(data);
+				// console.log(data);
 				listcounter = data[0];
 				if (data[1].length === 0) {
 					convolist =
@@ -60,15 +60,15 @@
 					data[1].forEach((ele) => {
 						let convowith, imgname, name, lastmessage;
 						// filter out
-						if (ele.m.sender !== id) {
-							convowith = ele.m.sender;
-							imgname = ele.us.sender_img === null ? './img/default.jpg' : `./img/${ele.us.sender_img}`;
-							name = ele.us.sender_name;
+						if (ele.m.sender === id) {
+							convowith = ele.m.receiver;
+							imgname = ele.UserS.simg === null ? './img/default.jpg' : `./img/${ele.UserS.simg}`;
+							name = ele.UserS.sname;
 							lastmessage = ele.m.content;
 						} else {
-							convowith = ele.m.receiver;
-							imgname = ele.ur.receiver_img === null ? './img/default.jpg' : `./img/${ele.ur.receiver_img}`;
-							name = ele.ur.receiver_name;
+							convowith = ele.m.sender;
+							imgname = ele.UserR.rimg === null ? './img/default.jpg' : `./img/${ele.UserR.rimg}`;
+							name = ele.UserR.rname;
 							lastmessage = `You: ${ele.m.content}`;
 						}
 
@@ -126,7 +126,9 @@
 									}, 1500);
 									deleted++;
 								} else {
-									$(`#convo_${thisid}`).removeClass('customdelete');
+									setTimeout(() => {
+										$(`#convo_${thisid}`).removeClass('customdelete');
+									}, 1500);
 								}
 								// console.log(data);
 							}

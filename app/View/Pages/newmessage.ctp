@@ -70,11 +70,11 @@
                         content: $("#message").val()
                     }
                 }, function(data) {
-                    console.log(data);
+                    // console.log(data);
                     if (data[0] !== 'error') {
                         window.location.href = '<?= Router::url('/messages') ?>';
                     }
-                });
+                }, 'json');
             }
         });
     });

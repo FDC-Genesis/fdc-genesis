@@ -111,3 +111,7 @@ Router::connect('/deleteconvo', [
 Router::connect('/deletemessage', [
 	'controller' => 'messages', 'action' => 'deletemessage'
 ]);
+
+Router::connect('/getimgs', [
+	'controller' => 'users', 'action' => 'getimgs'
+]);

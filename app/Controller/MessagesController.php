@@ -7,18 +7,52 @@ if (!function_exists('dd')) {
         die();
     }
 }
+
+function datastructurer($data, $id)
+{
+    $arr1 = [];
+    $arr2 = [];
+    foreach ($data as $d) {
+        if ($d['m']['sender'] === $id) {
+            array_push($arr1, $d);
+        } else {
+            array_push($arr2, $d);
+        }
+    }
+    $result = [];
+    foreach ($arr1 as $a) {
+        $partial = $a;
+        foreach ($arr2 as $b) {
+            if ($a['m']['sender'] === $b['m']['receiver'] && $a['m']['receiver'] === $b['m']['sender']) {
+                if ((int)($a[0]['max_id']) < (int)($b[0]['max_id'])) {
+                    $partial = $b;
+                }
+            }
+        }
+        array_push($result, $partial);
+    }
+    usort($result, 'comparemaxid');
+    return $result;
+}
+
+function comparemaxid($a, $b)
+{
+    return (int)($b[0]['max_id']) - (int)($a[0]['max_id']);
+}
 class MessagesController extends AppController
 {
     public $uses = array('Message');
 
     public function sendmessage()
     {
+        $this->loadModel('User');
         if ($this->request->is('post')) {
             $this->Message->set($this->request->data);
             if ($this->Message->validates()) {
-                if ($this->Message->create($this->request->data)) {
-                    $savedData = $this->Message->save();
-                    echo json_encode($savedData);
+                if ($savedData = $this->Message->save($this->request->data)) {
+                    $imgname = $this->User->findById($savedData['Message']['sender']);
+                    $imageName = $imgname['User']['img_name'];
+                    echo json_encode([$savedData, $imageName]);
                 } else {
                     echo json_encode(["error"]);
                 }
@@ -36,73 +70,12 @@ class MessagesController extends AppController
         $count = (int)$this->request->query('count');
 
         // for counting and pagination purposes
-        $countquery = "SELECT 
-                    m.sender, 
-                    m.receiver, 
-                    ur.name AS receiver_name, 
-                    ur.img_name AS receiver_img,
-                    us.name AS sender_name, 
-                    us.img_name AS sender_img,
-                    m.content, 
-                    m.date
-                FROM 
-                    messages AS m
-                INNER JOIN 
-                    users AS ur ON ur.id = m.receiver
-                INNER JOIN 
-                    users AS us ON us.id = m.sender
-                WHERE 
-                    (m.receiver = :id OR m.sender = :id)
-                    AND NOT EXISTS (
-                        SELECT 1 
-                        FROM messages AS m2 
-                        WHERE 
-                            (m2.sender = m.receiver AND m2.receiver = m.sender) 
-                            AND m2.id > m.id
-                    )
-                ORDER BY 
-                    m.date DESC";
+        $countquery = "SELECT sender, receiver, m.content, MAX(m.id) AS max_id, m.date, UserR.name as rname, UserR.img_name as rimg, UserS.name as sname, UserS.img_name as simg FROM messages as m RIGHT JOIN users as UserR on m.sender = UserR.id RIGHT JOIN users as UserS on m.receiver = UserS.id WHERE m.sender = :id or m.receiver = :id GROUP BY m.sender, m.receiver ORDER BY m.date desc;";
         $result = $this->Message->query($countquery, ['id' => $id]);
-        $count = floor(sizeof($result) / 10) + (sizeof($result) % 10 === 0 ? 0 : 1);
 
-        // Algorithm
-
-        // kuhaon tanan row sa message
-        // i join ang mga name sa receiver ug sender
-        // use alias para dili maglibog ang users nga table
-        // pag maquery na na diha
-        // get only one on the row kung nag equals ang sender(id) ug receiver(id) reciprocally para ma filter out ang convolist
-        // kuhaon lang ang kadtong latest date pero pwede ra ang id since ang id is incremented
-        $query =
-            "SELECT 
-                    m.sender, 
-                    m.receiver, 
-                    ur.name AS receiver_name, 
-                    ur.img_name AS receiver_img,
-                    us.name AS sender_name, 
-                    us.img_name AS sender_img,
-                    m.content, 
-                    m.date
-                FROM 
-                    messages AS m
-                INNER JOIN 
-                    users AS ur ON ur.id = m.receiver
-                INNER JOIN 
-                    users AS us ON us.id = m.sender
-                WHERE 
-                    (m.receiver = :id OR m.sender = :id)
-                    AND NOT EXISTS (
-                        SELECT 1 
-                        FROM messages AS m2 
-                        WHERE 
-                            (m2.sender = m.receiver AND m2.receiver = m.sender) 
-                            AND m2.id > m.id
-                    )
-                ORDER BY 
-                    m.date DESC limit 10 offset $offset";
-
-        $data = $this->Message->query($query, ['id' => $id]);
-        echo json_encode([$count, $data]);
+        $newdata = datastructurer($result, $id);
+        $count = floor(sizeof($newdata) / 10) + ceil(sizeof($newdata) / 10 > 0 ? 1 : 0);
+        echo json_encode([$count, array_slice($newdata, $offset, 10)]);
         exit();
     }
 
@@ -144,9 +117,9 @@ class MessagesController extends AppController
         $count = (int)$this->request->query('count');
 
         // for counting and pagination purposes
-        $countquery = "SELECT count(id) from messages where (receiver = :id and sender = :convowith) or (receiver = :convowith and sender = :id)";
+        $countquery = "SELECT count(id) as count from messages where (receiver = :id and sender = :convowith) or (receiver = :convowith and sender = :id)";
         $result = $this->Message->query($countquery, ['id' => $id, 'convowith' => $convowith]);
-        $count = floor(sizeof($result) / 10) + (sizeof($result) % 10 === 0 ? 0 : 1);
+        $count = floor((int)$result[0][0]['count'] / 10) + (ceil((int)$result[0][0]['count'] / 10) > 0 ? 1 : 0);
 
         $sql = "SELECT
                 m.id,
@@ -182,9 +155,7 @@ class MessagesController extends AppController
         if ($this->request->is('post')) {
             $id = $this->request->data['id'];
 
-            $query = $this->Message->query("DELETE from messages where id = ?", [$id]);
-
-            if ($query) {
+            if ($this->Message->delete($id)) {
                 echo "success";
             } else {
                 echo "error";
