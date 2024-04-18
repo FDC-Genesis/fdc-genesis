@@ -33,10 +33,15 @@ $cakeVersion = __d('cake_dev', 'CakePHP %s', Configure::version())
 	echo $this->Html->css('bootstrap');
 	echo $this->Html->css('choosen');
 	echo $this->Html->css('datepicker');
+	// echo $this->Html->script('angular');
 	?>
 	<style>
+		.error-message {
+			color: red;
+		}
+
 		.customdelete {
-			animation: cdelete 1.5s 1 ease-in-out;
+			animation: cdelete 2s 1 ease-in-out;
 		}
 
 		@keyframes cdelete {

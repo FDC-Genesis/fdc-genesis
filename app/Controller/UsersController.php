@@ -18,8 +18,29 @@ class UsersController extends AppController
         if ($this->Auth->user()) {
             $this->redirect('/');
         } else {
-            $url = Router::url('/signin');
-            $this->set(compact('url'));
+            App::uses('AuthComponent', 'Controller/Component');
+            if ($this->request->is('POST')) {
+                $email = $this->request->data['User']['email'];
+                $hashed = AuthComponent::password($this->request->data['User']['password']);
+                $user = $this->User->findByEmail($email);
+                if ($user) {
+                    if ($hashed !== $user['User']['password']) {
+                        $validationErrors = ['password' => ['Wrong password']];
+                        $this->Session->write('validationErrors', $validationErrors);
+                        // $this->redirect('/login');
+                    } else {
+                        if ($this->Auth->login($user)) {
+                            $userId = $this->Auth->user()['User']['id'];
+                            $this->User->query("UPDATE users SET last_login = now() where id = '$userId'");
+                            $this->redirect('/');
+                        }
+                    }
+                } else {
+                    $validationErrors = ['email' => ['Email not found']];
+                    $this->Session->write('validationErrors', $validationErrors);
+                }
+                // exit();
+            }
             $this->render('login');
         }
     }
@@ -28,35 +49,27 @@ class UsersController extends AppController
         if ($this->Auth->user()) {
             $this->redirect('/');
         } else {
+            if ($this->request->is('post')) {
+                $email = $this->request->data('User.email');
+                $name = $this->request->data('User.name');
+                $password = $this->request->data('User.password');
+                $confirm = $this->request->data('User.confirm-password');
+                $this->User->validator()->remove('gender');
+                $this->User->validator()->remove('birthdate');
+                $this->User->validator()->remove('hobby');
+                $this->User->set($this->request->data);
+                if ($this->User->validates()) {
+                    if ($this->User->save(['email' => $email, 'name' => $name, 'password' => $password, 'joined_date' => date('Y-m-d H:i:s')])) {
+                        $this->Session->write('registered', ['email' => $email, 'password' => $password]);
+                        $this->redirect('/signup');
+                    }
+                } else {
+                    $this->set('errors', $this->User->validationErrors);
+                    $this->render('signup');
+                }
+            }
             $this->render('signup');
         }
-    }
-
-    public function register()
-    {
-
-        if ($this->request->is('post')) {
-            $email = $this->request->data('email');
-            $name = $this->request->data('name');
-            $password = $this->request->data('password');
-            // $confirm = $this->request->data('confirm-password');
-            $this->User->validator()->remove('gender');
-            $this->User->validator()->remove('birthdate');
-            $this->User->validator()->remove('hobby');
-            $this->User->set($this->request->data);
-            if ($this->User->validates()) {
-                if ($this->User->save(['email' => $email, 'name' => $name, 'password' => $password, 'joined_date' => date('Y-m-d H:i:s')])) {
-                    $this->Session->write('registered', ['email' => $email, 'password' => $password]);
-                    $this->redirect(array('controller' => 'users', 'action' => 'signup'));
-                }
-            } else {
-                $validationErrors = $this->User->validationErrors;
-
-                $this->Session->write('validationErrors', $validationErrors);
-                $this->redirect(array('controller' => 'users', 'action' => 'signup'));
-            }
-        }
-        exit();
     }
 
     public function directlogin()
@@ -80,30 +93,6 @@ class UsersController extends AppController
 
     public function signin()
     {
-        App::uses('AuthComponent', 'Controller/Component');
-        if ($this->request->is('POST')) {
-            $email = $this->request->data['email'];
-            $hashed = AuthComponent::password($this->request->data['password']);
-            $user = $this->User->findByEmail($email);
-            if ($user) {
-                if ($hashed !== $user['User']['password']) {
-                    $validationErrors = ['password' => ['Wrong password']];
-                    $this->Session->write('validationErrors', $validationErrors);
-                    $this->redirect('/login');
-                } else {
-                    if ($this->Auth->login($user)) {
-                        $userId = $this->Auth->user()['User']['id'];
-                        $this->User->query("UPDATE users SET last_login = now() where id = '$userId'");
-                        $this->redirect('/');
-                    }
-                }
-            } else {
-                $validationErrors = ['email' => ['Email not found']];
-                $this->Session->write('validationErrors', $validationErrors);
-                $this->redirect('/login');
-            }
-            exit();
-        }
     }
 
     public function logout()
@@ -140,14 +129,20 @@ class UsersController extends AppController
                                 $this->Session->write('validationErrors', ['error' => ['Only jpg, png and gif files are allowed']]);
                             } else {
                                 $newname = date('YmdHis');
-                                $filename = $this->User->id . $newname . '.' . $ext;
-                                if (!$this->User->saveField('img_name', $filename)) {
+                                $filename = $newname . '.' . $ext;
+                                $path = WWW_ROOT . 'img/' . $this->User->id . '/';
+
+
+                                if (!is_dir($path)) {
+                                    mkdir($path);
+                                }
+                                if (!$this->User->saveField('img_name', $this->User->id . '/' . $filename)) {
                                     $this->Session->write(
                                         'validationErrors',
                                         ['error' => ['There was an error saving the uploaded file']]
                                     );
                                 } else {
-                                    move_uploaded_file($file['tmp_name'], WWW_ROOT . 'img/' . $filename);
+                                    move_uploaded_file($file['tmp_name'], $path . $filename);
                                 }
                             }
                         }
