@@ -137,7 +137,7 @@ class MessagesController extends AppController
         $count = (int)$this->request->query('count');
 
         // for counting and pagination purposes
-        $countquery = "SELECT count(id) as count from messages where (receiver = :id and sender = :convowith) or (receiver = :convowith and sender = :id) group by id";
+        $countquery = "SELECT count(id) as count from messages where (receiver = :id and sender = :convowith) or (receiver = :convowith and sender = :id)";
         $result = $this->Message->query($countquery, ['id' => $id, 'convowith' => $convowith]);
         $count = floor((int)$result[0][0]['count'] / 10) + (ceil((int)$result[0][0]['count'] / 10) > 0 ? 1 : 0);
 

@@ -54,7 +54,7 @@
         function getchats(lo, lc, dltd) {
             let chats = "";
             $.getJSON(`<?= Router::url('/getchats') ?>/<?= $convowith ?>?&offset=${lo}&counter=${lc}&deleted=${dltd}`, function(data) {
-                // console.log(data);
+                console.log(data);
                 listcounter = data[0];
                 if (data[1].length === 0) {
                     chats =
