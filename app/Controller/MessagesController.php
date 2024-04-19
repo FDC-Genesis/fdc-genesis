@@ -64,38 +64,39 @@ class MessagesController extends AppController
 
     public function convolist()
     {
-
         $id = $this->request->query('id');
         $deleted = (int)$this->request->query('deleted');
         $offset = (((int)$this->request->query('offset') - 1) * 10) - $deleted;
-        $count = (int)$this->request->query('count');
 
-        // for counting and pagination purposes
-        // $countquery = "SELECT m.sender, m.receiver, m.content, MAX(m.id) AS max_id, m.date, UserR.name as rname, UserR.img_name as rimg, UserS.name as sname, UserS.img_name as simg FROM messages as m RIGHT JOIN users as UserR on m.sender = UserR.id RIGHT JOIN users as UserS on m.receiver = UserS.id WHERE m.sender = :id or m.receiver = :id GROUP BY m.sender, m.receiver ORDER BY m.date desc;";
-        $q1 = "SELECT receiver, MAX(id) as id from messages where sender = :id GROUP BY receiver";
-        $result = $this->Message->query($q1, ['id' => $id]);
-        $q2 = "SELECT sender, MAX(id) as id from messages where receiver = :id GROUP BY sender";
-        $result2 = $this->Message->query($q2, ['id' => $id]);
+        $countlatest = $this->Message->query("SELECT MAX(id) AS max_id
+                FROM messages
+                WHERE sender = '$id' OR receiver = '$id'
+                GROUP BY GREATEST(sender, receiver) ORDER BY max_id desc");
 
-        $newdata = datastructurer($result, $result2);
-        $count = floor(sizeof($newdata) / 10) + ceil(sizeof($newdata) / 10 > 0 ? 1 : 0);
-        // echo json_encode([$count, array_slice($newdata, $offset, 10), $result]);
-        $toquery = array_slice($newdata, $offset, 10);
-        $returndata = [];
+        $count = floor(sizeof($countlatest) / 10) + (sizeof($countlatest) % 10 === 0 ? 0 : 1);
 
-        foreach ($toquery as $t) {
-            $maxid = $t[0]['id'];
-            if (isset($t['messages']['receiver'])) {
-                // $ConvoWithId = $t['messages']['receiver'];
-                $q3 = "SELECT m.sender as sender, m.receiver as receiver, m.content as content, m.date as date, u.img_name as img_name, u.name as name from messages as m join users as u where m.receiver = u.id and m.id = :id";
-            } else if (isset($t['messages']['sender'])) {
-                // $ConvoWithId = $t['messages']['sender'];
-                $q3 = "SELECT m.sender as sender, m.receiver as receiver, m.content as content, m.date as date, u.img_name as img_name, u.name as name from messages as m join users as u where m.sender = u.id and m.id = :id";
-            }
-            $returndata[] = $this->Message->query($q3, ['id' => $maxid])[0];
+        $latest =
+            $this->Message->query("SELECT MAX(id) AS max_id
+                FROM messages
+                WHERE sender = '$id' OR receiver = '$id'
+                GROUP BY GREATEST(sender, receiver) ORDER BY max_id desc limit 10 offset $offset");
+
+        // kuhaon ang mga id
+        $ids = [];
+        foreach ($latest as $eachid) {
+            array_push($ids, $eachid[0]['max_id']);
         }
-        usort($returndata, 'comparedate');
-        echo json_encode([$count,  $returndata]);
+
+        $implodedIds = implode(',', $ids);
+        $fetched = $this->Message->query("SELECT m.sender as sender, m.receiver as receiver, m.content as content, m.date as date, s.img_name as simg, s.name as sn, r.img_name as rimg, r.name as rn
+                    FROM messages AS m JOIN users as s JOIN users as r
+                    WHERE
+                    m.sender = s.id and m.receiver = r.id and
+                    m.id IN ($implodedIds)
+                    ORDER BY m.date DESC");
+
+
+        echo json_encode([$count, $fetched]);
         exit();
     }
 

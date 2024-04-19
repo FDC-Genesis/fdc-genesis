@@ -45,7 +45,7 @@
 		function getconvolist(id, lo, lc, dltd) {
 			let convolist = "";
 			$.getJSON(`<?= Router::url('/convolist') ?>?id=${id}&offset=${lo}&counter=${lc}&deleted=${dltd}`, function(data) {
-				// console.log(data);
+				console.log(data);
 				listcounter = data[0];
 				if (data[1].length === 0) {
 					convolist =
@@ -59,13 +59,16 @@
 				} else {
 					data[1].forEach((ele) => {
 						let convowith, imgname, name, lastmessage;
+
 						// filter out
-						name = ele.u.name
-						imgname = ele.u.img_name === null ? './img/default.jpg' : `./img/${ele.u.img_name}`;
 						if (ele.m.sender === id) {
+							imgname = ele.r.rimg === null ? './img/default.jpg' : `./img/${ele.r.rimg}`;
+							name = ele.r.rn;
 							convowith = ele.m.receiver;
 							lastmessage = `You: ${ele.m.content}`;
 						} else {
+							imgname = ele.s.simg === null ? './img/default.jpg' : `./img/${ele.s.simg}`;
+							name = ele.s.sn;
 							convowith = ele.m.sender;
 							lastmessage = ele.m.content;
 						}
@@ -99,7 +102,6 @@
 				});
 
 				$("div[class*='goto_']").click(function() {
-					// alert();
 					const thisclass = $(this).attr("class").split(" ");
 					const result = thisclass.find(item => item.startsWith('goto_')).split("_")[1];
 					if (result !== undefined) {
@@ -121,14 +123,13 @@
 								if (data === 'success') {
 									setTimeout(() => {
 										$(`#convo_${thisid}`).remove();
-									}, 1500);
+									}, 1000);
 									deleted++;
 								} else {
 									setTimeout(() => {
 										$(`#convo_${thisid}`).removeClass('customdelete');
-									}, 1500);
+									}, 1000);
 								}
-								// console.log(data);
 							}
 						});
 					} else if (e.type === 'mouseover') {
