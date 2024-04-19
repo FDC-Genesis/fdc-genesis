@@ -54,7 +54,7 @@
         function getchats(lo, lc, dltd) {
             let chats = "";
             $.getJSON(`<?= Router::url('/getchats') ?>/<?= $convowith ?>?&offset=${lo}&counter=${lc}&deleted=${dltd}`, function(data) {
-                console.log(data);
+                // console.log(data);
                 listcounter = data[0];
                 if (data[1].length === 0) {
                     chats =
@@ -74,7 +74,7 @@
                         imgname = ele.us.sender_img === null ? '../img/default.jpg' : `../img/${ele.us.sender_img}`;
                         convoid = ele.m.id;
                         if (ele.m.sender !== id) {
-                            name = ele.ur.receiver_name;
+                            name = ele.us.sender_name;
 
                             chats +=
                                 `
@@ -115,6 +115,7 @@
                     if (listoffset < listcounter) {
                         chats += `<p class="text-center" id="showlist">Show More</p>`;
                     }
+                    console.log(listoffset, listcounter, data);
                 }
                 $("#messagelist").append(chats);
                 $("p[id='showlist']").click(function() {
@@ -127,7 +128,6 @@
                     const thisid = $(this).attr("id").split("_")[1];
                     if (e.type === 'click') {
                         deleterow(thisid);
-
                     }
 
 
@@ -168,11 +168,10 @@
             const countchars = $("#message").val().split('').reduce((count, ele) => {
                 if (chars.includes(ele.toLowerCase())) {
                     count++;
-                    return count;
                 }
+                return count;
             }, 0);
             if (countchars > 0) {
-                // alert('hello');
                 $.post(`<?= Router::url(['controller' => 'messages', 'action' => 'sendmessage']) ?>`, {
                     Message: {
                         sender: id,
@@ -181,30 +180,27 @@
                     }
                 }, function(data) {
                     if (data[0] !== 'error') {
-                        // console.log(data);
                         $("#message").val('');
                         deleted--;
                         let html = "";
                         html +=
-                            `<li id="convo_${data[0].Message.id}" style="list-style: none; border: solid gray 1px; border-radius: 25px; gap: 0 30px;" class="p-2 d-flex mb-3">
-								<div class="goto_${data[0].Message.id}">
-									<img src="../img/${data[1] === null ? 'default.jpg':data[1]}" height="100" width="100" style="border-radius: 50%;">
-								</div>
-								<div>
+                            `<li id="convo_${data[0].Message.id}" style="list-style: none; border: solid gray 1px; border-radius: 25px; gap: 0 30px;" class="p-2 d-flex mb-3 justify-content-end">
+                                <div>
                                     <div class="text-primary h5 goto_${data[0].Message.id}">You</div>
 									<div class="mb-2 goto_${data[0].Message.id}">${data[0].Message.content}</div>
-									<div class="d-flex justify-content-start align-items-center" style="gap: 0 800px;">
+									<div class="d-flex justify-content-end align-items-center" style="gap: 0 800px;">
+                                        <div class="text-danger" id="delete_${data[0].Message.id}">Delete</div>
 										<div class="text-secondary goto_${data[0].Message.id}" style="font-size: 10px;">${datearrange(data[0].Message.date)}</div>
-										<div class="text-danger text-end" id="delete_${data[0].Message.id}">Delete</div>
 									</div>
+								</div>
+								<div class="goto_${data[0].Message.id}">
+									<img src="../img/${data[1] === null ? 'default.jpg':data[1]}" height="100" width="100" style="border-radius: 50%;">
 								</div>
 							</li>`;
                         $("#messagelist").prepend(html);
                         $(`div[id='delete_${data[0].Message.id}']`).click(function(e) {
                             const thisid = $(this).attr("id").split("_")[1];
-                            if (e.type === 'click') {
-                                deleterow(thisid);
-                            }
+                            deleterow(thisid);
                         });
                     }
                 }, 'json');

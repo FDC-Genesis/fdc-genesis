@@ -118,11 +118,11 @@ class UsersController extends AppController
             $this->User->set($this->request->data);
             if ($this->User->validates()) {
                 if ($this->User->save($this->request->data)) {
-                    if (!empty($_FILES['img'])) {
+                    if (!empty($_FILES['img']['tmp_name']) && isset($_FILES['img']['tmp_name'])) {
                         $file = $_FILES['img'];
-                        if ($file['error'] !== 0) {
-                            $this->Session->write('validationErrors', ['error' => ['There was an error on file uploaded']]);
-                        } else {
+                        // var_dump($file['error']);
+                        if ($file['error'] === 0) {
+
                             $allowed = ['jpg', 'png', 'gif'];
                             $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                             if (!in_array($ext, $allowed)) {
@@ -145,6 +145,8 @@ class UsersController extends AppController
                                     move_uploaded_file($file['tmp_name'], $path . $filename);
                                 }
                             }
+                        } else {
+                            $this->Session->write('validationErrors', ['error' => ['There was an error on file uploaded']]);
                         }
                     }
                 }

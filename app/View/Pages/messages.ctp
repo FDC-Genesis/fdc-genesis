@@ -60,16 +60,14 @@
 					data[1].forEach((ele) => {
 						let convowith, imgname, name, lastmessage;
 						// filter out
+						name = ele.u.name
+						imgname = ele.u.img_name === null ? './img/default.jpg' : `./img/${ele.u.img_name}`;
 						if (ele.m.sender === id) {
 							convowith = ele.m.receiver;
-							imgname = ele.UserS.simg === null ? './img/default.jpg' : `./img/${ele.UserS.simg}`;
-							name = ele.UserS.sname;
-							lastmessage = ele.m.content;
+							lastmessage = `You: ${ele.m.content}`;
 						} else {
 							convowith = ele.m.sender;
-							imgname = ele.UserR.rimg === null ? './img/default.jpg' : `./img/${ele.UserR.rimg}`;
-							name = ele.UserR.rname;
-							lastmessage = `You: ${ele.m.content}`;
+							lastmessage = ele.m.content;
 						}
 
 						convolist +=

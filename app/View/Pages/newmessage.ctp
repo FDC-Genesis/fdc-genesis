@@ -54,15 +54,19 @@
 
         $("#send").click(function() {
             const chars = '123456789qwertyuiopasdfghjklzxcvbnm'.split('');
-
-            const countchars = $("#message").val().split('').reduce((count, ele) => {
+            let c = $("#message").val().split('');
+            // console.log(c);
+            const countchars = c.reduce((count, ele) => {
                 if (chars.includes(ele.toLowerCase())) {
                     count++;
-                    return count;
                 }
+                return count;
+                // console.log(ele);
             }, 0);
+            console.log(c.length, countchars);
             if ($("#to").val() !== '' && countchars > 0) {
                 // alert('hello');
+
                 $.post(`<?= Router::url(['controller' => 'messages', 'action' => 'sendmessage']) ?>`, {
                     Message: {
                         sender: id,
@@ -70,10 +74,10 @@
                         content: $("#message").val()
                     }
                 }, function(data) {
-                    // console.log(data);
+                    console.log(data);
                     if (data[0] !== 'error') {
                         window.location.href = '<?= Router::url('/messages') ?>';
-                    }
+                    } else {}
                 }, 'json');
             }
         });
